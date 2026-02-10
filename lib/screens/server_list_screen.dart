@@ -15,240 +15,130 @@ class ServerListScreen extends StatefulWidget {
   State<ServerListScreen> createState() => _ServerListScreenState();
 }
 
-class _ServerListScreenState extends State<ServerListScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _fabController;
-  late AnimationController _bgController;
-
+class _ServerListScreenState extends State<ServerListScreen> {
   @override
   void initState() {
     super.initState();
-    _fabController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ServerProvider>().loadSavedServers();
     });
   }
 
-  @override
-  void dispose() {
-    _fabController.dispose();
-    _bgController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Animated background gradient orbs
-          _AnimatedBackground(controller: _bgController),
-          // Main content
-          SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics()),
-              slivers: [
-                // Header
-                SliverToBoxAdapter(child: _buildHeader(context)),
-                const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                // Server list
-                Consumer<ServerProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.servers.isEmpty) {
-                      return SliverFillRemaining(
-                          child: _buildEmptyState(context));
-                    }
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final config = provider.servers[index];
-                          return Dismissible(
-                            key: Key(config.id),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (_) => _confirmDelete(context),
-                            onDismissed: (_) =>
-                                provider.removeServer(config.id),
-                            background: Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppTheme.danger.withValues(alpha: 0.0),
-                                    AppTheme.danger.withValues(alpha: 0.15),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(22),
-                              ),
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 28),
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppTheme.danger.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: AppTheme.danger,
-                                  size: 22,
-                                ),
-                              ),
-                            ),
-                            child: ServerCard(
-                              config: config,
-                              onTap: () =>
-                                  _openServer(context, provider, config),
-                              onDelete: () async {
-                                final confirmed =
-                                    await _confirmDelete(context);
-                                if (confirmed == true) {
-                                  provider.removeServer(config.id);
-                                }
-                              },
-                            ),
-                          );
-                        },
-                        childCount: provider.servers.length,
-                      ),
-                    );
-                  },
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
-              ],
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics()),
+          slivers: [
+            // Header
+            SliverToBoxAdapter(child: _buildHeader(context)),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            // Server list
+            Consumer<ServerProvider>(
+              builder: (context, provider, _) {
+                if (provider.servers.isEmpty) {
+                  return SliverFillRemaining(
+                      hasScrollBody: false, child: _buildEmptyState(context));
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final config = provider.servers[index];
+                      // Temporary: defaulting to true for UI demo as we don't have bulk-check yet
+                      // In a real app, we'd fire a background ping for each server.
+                      const isOnline = true;
+
+                      return Dismissible(
+                        key: Key(config.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _confirmDelete(context),
+                        onDismissed: (_) => provider.removeServer(config.id),
+                        background: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                                color: AppTheme.danger.withValues(alpha: 0.3)),
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 28),
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppTheme.danger,
+                            size: 24,
+                          ),
+                        ),
+                        child: ServerCard(
+                          config: config,
+                          isOnline: isOnline,
+                          onTap: () => _openServer(context, provider, config),
+                          onDelete: () async {
+                            final confirmed = await _confirmDelete(context);
+                            if (confirmed == true) {
+                              provider.removeServer(config.id);
+                            }
+                          },
+                        ),
+                      );
+                    },
+                    childCount: provider.servers.length,
+                  ),
+                );
+              },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 2),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: _fabController,
-          curve: Curves.elasticOut,
-        )),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primary.withValues(alpha: 0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: FloatingActionButton.extended(
-            onPressed: () => _addServer(context),
-            icon: const Icon(Icons.add_rounded, size: 22),
-            label: const Text(
-              'Add Server',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-            ),
-          ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addServer(context),
+        child: const Icon(Icons.add_rounded, size: 28),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo icon with gradient
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.heroGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.shield_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
+              Text(
+                'My Servers',
+                style: Theme.of(context).textTheme.headlineLarge,
               ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ShaderMask(
-                    shaderCallback: (bounds) =>
-                        AppTheme.heroGradient.createShader(bounds),
-                    child: Text(
-                      'Outline',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineLarge
-                          ?.copyWith(
-                            color: Colors.white,
-                          ),
-                    ),
-                  ),
-                  Text(
-                    'SERVER MANAGER',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: AppTheme.textMuted,
-                          letterSpacing: 2,
-                          fontSize: 11,
-                        ),
-                  ),
-                ],
+              const SizedBox(height: 4),
+              Consumer<ServerProvider>(
+                builder: (context, provider, _) {
+                  final count = provider.servers.length;
+                  return Text(
+                    '$count active connection${count != 1 ? 's' : ''}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          // Server count or quick stats
-          Consumer<ServerProvider>(
-            builder: (context, provider, _) {
-              if (provider.servers.isEmpty) return const SizedBox.shrink();
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCard.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppTheme.border.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _QuickStat(
-                      icon: Icons.dns_rounded,
-                      value: '${provider.servers.length}',
-                      label: provider.servers.length == 1
-                          ? 'Server'
-                          : 'Servers',
-                    ),
-                  ],
-                ),
-              );
-            },
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+            ),
+            child: const Icon(
+              Icons.settings_rounded,
+              color: AppTheme.textSecondary,
+              size: 24,
+            ),
           ),
         ],
       ),
@@ -401,105 +291,4 @@ class _ServerListScreenState extends State<ServerListScreen>
   }
 }
 
-// ─── Quick stat widget ────────────────────────────────────────────
 
-class _QuickStat extends StatelessWidget {
-  const _QuickStat(
-      {required this.icon, required this.value, required this.label});
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: AppTheme.primary),
-        const SizedBox(width: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textMuted,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Animated background ──────────────────────────────────────────
-
-class _AnimatedBackground extends StatelessWidget {
-  const _AnimatedBackground({required this.controller});
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        final size = MediaQuery.of(context).size;
-        return CustomPaint(
-          size: size,
-          painter: _BgPainter(controller.value),
-        );
-      },
-    );
-  }
-}
-
-class _BgPainter extends CustomPainter {
-  _BgPainter(this.t);
-  final double t;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Primary glow orb
-    final p1 = Offset(
-      size.width * (0.2 + 0.1 * math.sin(t * 2 * math.pi)),
-      size.height * (0.15 + 0.05 * math.cos(t * 2 * math.pi)),
-    );
-    canvas.drawCircle(
-      p1,
-      size.width * 0.45,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.04),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: p1, radius: size.width * 0.45)),
-    );
-
-    // Accent glow orb
-    final p2 = Offset(
-      size.width * (0.8 + 0.1 * math.cos(t * 2 * math.pi + 1)),
-      size.height * (0.6 + 0.08 * math.sin(t * 2 * math.pi + 1)),
-    );
-    canvas.drawCircle(
-      p2,
-      size.width * 0.5,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            AppTheme.accent.withValues(alpha: 0.03),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: p2, radius: size.width * 0.5)),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_BgPainter old) => old.t != t;
-}

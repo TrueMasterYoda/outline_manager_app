@@ -548,12 +548,8 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0D1F3C), Color(0xFF050A18)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient,
       ),
       child: Stack(
         children: [

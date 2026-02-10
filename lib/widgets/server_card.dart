@@ -1,14 +1,18 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../models/server_config.dart';
 import '../theme/app_theme.dart';
+import 'gradient_card.dart';
+import 'sparkline_chart.dart';
 
-class ServerCard extends StatefulWidget {
+class ServerCard extends StatelessWidget {
   const ServerCard({
     super.key,
     required this.config,
     required this.onTap,
-    required this.onDelete,
+    this.onDelete,
     this.isOnline,
     this.keyCount,
     this.totalTransfer,
@@ -16,285 +20,199 @@ class ServerCard extends StatefulWidget {
 
   final ServerConfig config;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final bool? isOnline;
   final int? keyCount;
   final String? totalTransfer;
 
   @override
-  State<ServerCard> createState() => _ServerCardState();
-}
-
-class _ServerCardState extends State<ServerCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  bool _pressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isOnline = widget.isOnline ?? false;
-    final statusColor = isOnline ? AppTheme.primary : AppTheme.textMuted;
+    // Dummy data for the sparkline to match the visual design
+    final random = Random(config.id.hashCode);
+    final dataPoints = List.generate(10, (_) => 2 + random.nextDouble() * 5);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF111833), Color(0xFF0F1D3D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isOnline
-                  ? AppTheme.primary.withValues(alpha: 0.15)
-                  : AppTheme.border.withValues(alpha: 0.5),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-              if (isOnline)
-                BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.06),
-                  blurRadius: 40,
-                  offset: const Offset(0, 4),
-                ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: Stack(
+    final statusColor = (isOnline ?? false) ? AppTheme.accent : AppTheme.danger;
+
+    return GradientCard(
+      onTap: onTap,
+      gradient: AppTheme.cardGradient,
+      padding: EdgeInsets.zero,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Subtle glow top-right
-                Positioned(
-                  top: -20,
-                  right: -20,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          statusColor.withValues(alpha: 0.08),
-                          Colors.transparent,
-                        ],
+                // Header: Name + Arrow
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        config.displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontSize: 18,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Status + IP
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: AppTheme.statusDot(statusColor),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      (isOnline ?? false) ? 'Reachable' : 'Unreachable',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '•',
+                      style: TextStyle(color: AppTheme.borderLight),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        config.host,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              letterSpacing: 0.5,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Chart area
+                SizedBox(
+                  height: 60,
+                  child: SparklineChart(
+                    dataPoints: dataPoints,
+                    color: AppTheme.primary,
+                    height: 60,
                   ),
                 ),
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      // Server icon with gradient background
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isOnline
-                                ? [
-                                    AppTheme.primary.withValues(alpha: 0.2),
-                                    AppTheme.accent.withValues(alpha: 0.1),
-                                  ]
-                                : [
-                                    AppTheme.surfaceDim,
-                                    AppTheme.bgCardLight,
-                                  ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isOnline
-                                ? AppTheme.primary.withValues(alpha: 0.2)
-                                : AppTheme.border.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.dns_rounded,
-                          color: isOnline ? AppTheme.primary : AppTheme.textMuted,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Server info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.config.displayName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.2,
+                const SizedBox(height: 16),
+                // Footer stats
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'DATA TRANSFER (24H)',
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: AppTheme.textMuted,
+                                    fontSize: 10,
+                                    letterSpacing: 0.5,
                                   ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                // Animated status dot
-                                AnimatedBuilder(
-                                  animation: _pulseController,
-                                  builder: (context, child) {
-                                    return Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: statusColor,
-                                        boxShadow: isOnline
-                                            ? [
-                                                BoxShadow(
-                                                  color: statusColor.withValues(
-                                                      alpha: 0.3 +
-                                                          _pulseController
-                                                                  .value *
-                                                              0.4),
-                                                  blurRadius: 6 +
-                                                      _pulseController.value *
-                                                          4,
-                                                  spreadRadius:
-                                                      _pulseController.value *
-                                                          1,
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                    );
-                                  },
+                        ),
+                        const SizedBox(height: 4),
+                        RichText(
+                          text: TextSpan(
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            children: [
+                              TextSpan(
+                                text: totalTransfer ?? '0 GB',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  widget.config.host,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppTheme.textMuted,
-                                        fontFamily: 'monospace',
-                                        fontSize: 12,
-                                      ),
+                              ),
+                              TextSpan(
+                                text: ' / 1 TB', // Placeholder limit
+                                style: TextStyle(
+                                  color: AppTheme.textMuted.withValues(alpha: 0.5),
+                                  fontSize: 12,
                                 ),
-                              ],
-                            ),
-                            // Stats row
-                            if (widget.keyCount != null ||
-                                widget.totalTransfer != null) ...[
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  if (widget.keyCount != null)
-                                    _StatChip(
-                                      icon: Icons.vpn_key_rounded,
-                                      label: '${widget.keyCount} keys',
-                                    ),
-                                  if (widget.keyCount != null &&
-                                      widget.totalTransfer != null)
-                                    const SizedBox(width: 10),
-                                  if (widget.totalTransfer != null)
-                                    _StatChip(
-                                      icon: Icons.arrow_upward_rounded,
-                                      label: widget.totalTransfer!,
-                                    ),
-                                ],
                               ),
                             ],
-                          ],
+                          ),
                         ),
+                      ],
+                    ),
+                    if (keyCount != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'ACCESS KEYS',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$keyCount',
+                              style: const TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-
-                      // Arrow
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceDim.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: AppTheme.textMuted,
-                          size: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceDim.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppTheme.border.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: AppTheme.textMuted),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+          // Left accent bar
+          Positioned(
+            left: 0,
+            top: 20,
+            bottom: 20,
+            child: Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: (isOnline ?? false) ? AppTheme.accent : AppTheme.danger,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(4),
+                  bottomRight: Radius.circular(4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: ((isOnline ?? false)
+                            ? AppTheme.accent
+                            : AppTheme.danger)
+                        .withValues(alpha: 0.5),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -302,3 +220,4 @@ class _StatChip extends StatelessWidget {
     );
   }
 }
+
