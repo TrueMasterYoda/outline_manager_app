@@ -12,207 +12,351 @@ class AddServerScreen extends StatefulWidget {
   State<AddServerScreen> createState() => _AddServerScreenState();
 }
 
-class _AddServerScreenState extends State<AddServerScreen> {
+class _AddServerScreenState extends State<AddServerScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _urlController = TextEditingController();
   final _nameController = TextEditingController();
   final _fingerprintController = TextEditingController();
   bool _isConnecting = false;
   String? _errorMessage;
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
 
   @override
   void dispose() {
     _urlController.dispose();
     _nameController.dispose();
     _fingerprintController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.bgDeep,
       appBar: AppBar(
         title: const Text('Add Server'),
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.close_rounded, size: 18),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Info card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: AppTheme.accentGradientCard,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.info_outline_rounded,
-                          color: AppTheme.primary,
-                          size: 22,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: FadeTransition(
+            opacity: CurvedAnimation(
+              parent: _animController,
+              curve: Curves.easeOut,
+            ),
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0, 0.05),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: _animController,
+                curve: Curves.easeOutCubic,
+              )),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Info card with gradient border
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: AppTheme.highlightCard,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.primary.withValues(alpha: 0.2),
+                                  AppTheme.accent.withValues(alpha: 0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.info_outline_rounded,
+                              color: AppTheme.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              'Paste your server\'s management API URL from the Outline setup output.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                    height: 1.4,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // API URL field
+                    _FieldLabel(
+                        label: 'API URL', icon: Icons.link_rounded),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _urlController,
+                      decoration: InputDecoration(
+                        hintText: 'https://1.2.3.4:1234/secret-path',
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(12),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.link_rounded,
+                              size: 14, color: AppTheme.primary),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          'Paste your server\'s API URL from the Outline Manager or server setup output.',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                  ),
+                      keyboardType: TextInputType.url,
+                      autocorrect: false,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: AppTheme.textPrimary,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter the API URL';
+                        }
+                        final uri = Uri.tryParse(value.trim());
+                        if (uri == null ||
+                            !uri.hasScheme ||
+                            !uri.hasAuthority) {
+                          return 'Invalid URL format';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Display name field
+                    _FieldLabel(
+                        label: 'Display Name',
+                        icon: Icons.label_outline_rounded,
+                        optional: true),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: 'My VPN Server',
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(12),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.label_outline_rounded,
+                              size: 14, color: AppTheme.accent),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Certificate fingerprint
+                    _FieldLabel(
+                        label: 'Certificate Fingerprint',
+                        icon: Icons.fingerprint_rounded,
+                        optional: true),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _fingerprintController,
+                      decoration: InputDecoration(
+                        hintText: 'SHA-256 fingerprint',
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(12),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.fingerprint_rounded,
+                              size: 14, color: AppTheme.purple),
+                        ),
+                      ),
+                      autocorrect: false,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        'For self-signed certificates, provide the SHA-256 fingerprint.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textMuted.withValues(alpha: 0.7),
+                              height: 1.4,
+                            ),
+                      ),
+                    ),
+
+                    // Error message
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                AppTheme.danger.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppTheme.danger
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppTheme.danger,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: AppTheme.danger
+                                      .withValues(alpha: 0.9),
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
 
-                const SizedBox(height: 28),
+                    const SizedBox(height: 36),
 
-                // API URL field
-                Text(
-                  'API URL',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _urlController,
-                  decoration: const InputDecoration(
-                    hintText: 'https://1.2.3.4:1234/secret-path',
-                    prefixIcon: Icon(Icons.link_rounded),
-                  ),
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the API URL';
-                    }
-                    final uri = Uri.tryParse(value.trim());
-                    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
-                      return 'Invalid URL format';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Display name field
-                Text(
-                  'Display Name (optional)',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    hintText: 'My VPN Server',
-                    prefixIcon: Icon(Icons.label_outline_rounded),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Certificate fingerprint
-                Text(
-                  'Certificate Fingerprint (optional)',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _fingerprintController,
-                  decoration: const InputDecoration(
-                    hintText: 'SHA-256 fingerprint',
-                    prefixIcon: Icon(Icons.fingerprint_rounded),
-                  ),
-                  autocorrect: false,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-                Text(
-                  'If your server uses a self-signed certificate, provide the SHA-256 fingerprint for secure verification.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-
-                // Error message
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppTheme.danger.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline_rounded,
-                            color: AppTheme.danger, size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: AppTheme.danger,
-                              fontSize: 13,
-                            ),
-                          ),
+                    // Connect button with gradient
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: _isConnecting
+                              ? null
+                              : AppTheme.primaryGradient,
+                          boxShadow: _isConnecting
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: AppTheme.primary
+                                        .withValues(alpha: 0.35),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 32),
-
-                // Connect button
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    onPressed: _isConnecting ? null : _connect,
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _isConnecting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppTheme.bgDark,
-                            ),
-                          )
-                        : const Text(
-                            'Connect',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                        child: FilledButton(
+                          onPressed: _isConnecting ? null : _connect,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _isConnecting
+                                ? AppTheme.bgCardLight
+                                : Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                  ),
+                          child: _isConnecting
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: AppTheme.primary
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Connecting...',
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const Text(
+                                  'Connect & Add',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.bgDeep,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -245,17 +389,70 @@ class _AddServerScreenState extends State<AddServerScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Server added successfully')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded,
+                    color: AppTheme.success, size: 20),
+                const SizedBox(width: 10),
+                const Text('Server added successfully'),
+              ],
+            ),
+          ),
         );
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Could not connect to server. Check the URL and try again.\n\nDetails: $e';
+        _errorMessage =
+            'Could not connect to server. Check the URL and try again.\n\nDetails: $e';
       });
     } finally {
       if (mounted) {
         setState(() => _isConnecting = false);
       }
     }
+  }
+}
+
+// ─── Field Label ──────────────────────────────────────────────────
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(
+      {required this.label, required this.icon, this.optional = false});
+  final String label;
+  final IconData icon;
+  final bool optional;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        if (optional) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceDim.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'optional',
+              style: TextStyle(
+                color: AppTheme.textMuted.withValues(alpha: 0.7),
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }

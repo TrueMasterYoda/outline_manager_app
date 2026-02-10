@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/access_key.dart';
-import '../providers/server_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/format_utils.dart';
 import '../widgets/access_key_tile.dart';
@@ -16,373 +14,381 @@ class AccessKeyDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Find latest version from provider
-    return Consumer<ServerProvider>(
-      builder: (context, provider, _) {
-        final key = provider.accessKeys.firstWhere(
-          (k) => k.id == accessKey.id,
-          orElse: () => accessKey,
-        );
+    final keyName =
+        accessKey.name.isEmpty ? 'Key #${accessKey.id}' : accessKey.name;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-                key.name.isEmpty ? 'Key #${key.id}' : key.name),
-            actions: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded),
-                onSelected: (action) =>
-                    _handleAction(context, provider, key, action),
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(
-                    value: 'rename',
-                    child: ListTile(
-                      leading: Icon(Icons.edit_rounded),
-                      title: Text('Rename'),
-                      dense: true,
+    return Scaffold(
+      backgroundColor: AppTheme.bgDeep,
+      appBar: AppBar(
+        title: Text(keyName),
+        leading: IconButton(
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.bgCard.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(12),
+              border:
+                  Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Key hero card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: AppTheme.highlightCard,
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primary.withValues(alpha: 0.2),
+                          AppTheme.accent.withValues(alpha: 0.1),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.primary.withValues(alpha: 0.15),
+                      ),
                     ),
+                    child: const Icon(Icons.vpn_key_rounded,
+                        color: AppTheme.primary, size: 28),
                   ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading:
-                          Icon(Icons.delete_rounded, color: AppTheme.danger),
-                      title:
-                          Text('Delete', style: TextStyle(color: AppTheme.danger)),
-                      dense: true,
-                    ),
+                  const SizedBox(height: 16),
+                  Text(
+                    keyName,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'ID: ${accessKey.id}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textMuted,
+                          fontFamily: 'monospace',
+                        ),
                   ),
                 ],
               ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Info chips
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                // Access URL section
-                if (key.accessUrl != null) ...[
-                  _SectionTitle(title: 'Access URL'),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: AppTheme.glassmorphicCard,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                if (accessKey.port != null)
+                  _DetailChip(
+                    icon: Icons.numbers_rounded,
+                    label: 'Port',
+                    value: accessKey.port.toString(),
+                  ),
+                if (accessKey.method != null)
+                  _DetailChip(
+                    icon: Icons.lock_rounded,
+                    label: 'Cipher',
+                    value: accessKey.method!,
+                  ),
+                if (accessKey.password != null)
+                  _DetailChip(
+                    icon: Icons.key_rounded,
+                    label: 'Password',
+                    value: '••••••',
+                  ),
+              ],
+            ),
+
+            // Data usage
+            if (accessKey.dataUsageBytes != null ||
+                accessKey.dataLimit != null) ...[
+              const SizedBox(height: 28),
+              _SectionLabel(label: 'Data Usage'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: AppTheme.glassmorphicCard,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          key.accessUrl!,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
+                        ShaderMask(
+                          shaderCallback: (bounds) =>
+                              AppTheme.primaryGradient.createShader(bounds),
+                          child: Text(
+                            FormatUtils.formatBytes(
+                                accessKey.dataUsageBytes ?? 0),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _copyUrl(context, key),
-                                icon: const Icon(Icons.copy_rounded, size: 18),
-                                label: const Text('Copy'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.primary,
-                                  side: const BorderSide(
-                                      color: AppTheme.primary,
-                                      width: 1.5),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: () => _shareUrl(key),
-                                icon:
-                                    const Icon(Icons.share_rounded, size: 18),
-                                label: const Text('Share'),
-                                style: FilledButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            'used',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppTheme.textMuted),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Connection Details
-                _SectionTitle(title: 'Connection Details'),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: AppTheme.glassmorphicCard,
-                  child: Column(
-                    children: [
-                      _DetailRow(label: 'ID', value: key.id),
-                      _DetailRow(label: 'Port', value: key.port?.toString() ?? '-'),
-                      _DetailRow(
-                          label: 'Encryption', value: key.method ?? '-'),
-                      if (key.password != null)
-                        _DetailRow(label: 'Password', value: '••••••••'),
-                    ],
-                  ),
+                    const SizedBox(height: 16),
+                    DataUsageBar(
+                      usedBytes: accessKey.dataUsageBytes ?? 0,
+                      limitBytes: accessKey.dataLimit?.bytes,
+                    ),
+                  ],
                 ),
+              ),
+            ],
 
-                const SizedBox(height: 24),
-
-                // Data Usage section
-                _SectionTitle(title: 'Data Usage'),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: AppTheme.glassmorphicCard,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DataUsageBar(
-                        usedBytes: key.dataUsageBytes ?? 0,
-                        limitBytes: key.dataLimit?.bytes,
+            // Access URL
+            if (accessKey.accessUrl != null) ...[
+              const SizedBox(height: 28),
+              _SectionLabel(label: 'Access URL'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: AppTheme.glassmorphicCard,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgDeep.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.border.withValues(alpha: 0.3),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () =>
-                                  _setDataLimit(context, provider, key),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.textSecondary,
-                                side: const BorderSide(color: AppTheme.border),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 12),
-                              ),
-                              child: Text(key.dataLimit != null
-                                  ? 'Change Limit'
-                                  : 'Set Limit'),
-                            ),
+                      child: Text(
+                        accessKey.accessUrl!,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GradientButton(
+                            icon: Icons.copy_rounded,
+                            label: 'Copy',
+                            gradient: AppTheme.primaryGradient,
+                            onTap: () =>
+                                _copyAccessUrl(context),
                           ),
-                          if (key.dataLimit != null) ...[
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () =>
-                                    _removeDataLimit(context, provider, key),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.danger,
-                                  side: BorderSide(
-                                      color: AppTheme.danger
-                                          .withValues(alpha: 0.5)),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                                child: const Text('Remove Limit'),
-                              ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _GradientButton(
+                            icon: Icons.share_rounded,
+                            label: 'Share',
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppTheme.accent,
+                                AppTheme.accentBright
+                              ],
                             ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
+                            onTap: () =>
+                                _shareAccessUrl(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  void _copyUrl(BuildContext context, AccessKey key) {
-    Clipboard.setData(ClipboardData(text: key.accessUrl!));
+  void _copyAccessUrl(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: accessKey.accessUrl!));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Access URL copied')),
-    );
-  }
-
-  void _shareUrl(AccessKey key) {
-    Share.share(key.accessUrl!);
-  }
-
-  void _handleAction(BuildContext context, ServerProvider provider,
-      AccessKey key, String action) {
-    switch (action) {
-      case 'rename':
-        _renameKey(context, provider, key);
-        break;
-      case 'delete':
-        _deleteKey(context, provider, key);
-        break;
-    }
-  }
-
-  Future<void> _renameKey(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
-    final controller = TextEditingController(text: key.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename Key'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Key name'),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: AppTheme.success, size: 18),
+            const SizedBox(width: 8),
+            const Text('Copied to clipboard'),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, controller.text),
-              child: const Text('Save')),
-        ],
       ),
     );
-    if (name != null && name.isNotEmpty) {
-      await provider.renameAccessKey(key.id, name);
-    }
   }
 
-  Future<void> _deleteKey(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Key'),
-        content: const Text(
-            'This will permanently revoke access for anyone using this key.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await provider.deleteAccessKey(key.id);
-      if (context.mounted) Navigator.pop(context);
-    }
-  }
-
-  Future<void> _setDataLimit(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
-    final controller = TextEditingController(
-      text: key.dataLimit != null
-          ? FormatUtils.bytesToGb(key.dataLimit!.bytes).toStringAsFixed(1)
-          : '',
-    );
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Set Data Limit'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            hintText: 'Limit in GB',
-            suffixText: 'GB',
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (result != null && result.isNotEmpty) {
-      final gb = double.tryParse(result);
-      if (gb != null && gb > 0) {
-        await provider.setKeyDataLimit(key.id, FormatUtils.gbToBytes(gb));
-      }
-    }
-  }
-
-  Future<void> _removeDataLimit(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
-    await provider.removeKeyDataLimit(key.id);
+  void _shareAccessUrl(BuildContext context) {
+    Share.share(accessKey.accessUrl!);
   }
 }
 
-// ─── Helper Widgets ──────────────────────────────────────────────
+// ─── Detail Chip ──────────────────────────────────────────────────
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge,
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+class _DetailChip extends StatelessWidget {
+  const _DetailChip(
+      {required this.icon, required this.label, required this.value});
+  final IconData icon;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.border.withValues(alpha: 0.4),
+        ),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textMuted,
-                  ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontFamily: 'monospace',
-                  ),
-            ),
+          Icon(icon, size: 14, color: AppTheme.textMuted),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Section Label ────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Gradient Button ──────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.icon,
+    required this.label,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: (gradient as LinearGradient)
+                  .colors
+                  .first
+                  .withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: AppTheme.bgDeep),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.bgDeep,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -25,34 +25,121 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
         final config = provider.selectedServer;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(config?.displayName ?? 'Server'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_rounded),
-                onPressed: () => _showServerSettings(context, provider),
-                tooltip: 'Server Settings',
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh_rounded),
-                onPressed: provider.isLoading
-                    ? null
-                    : () => provider.refreshServerData(),
-                tooltip: 'Refresh',
-              ),
-            ],
+          backgroundColor: AppTheme.bgDeep,
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxScrolled) {
+              return [
+                SliverAppBar(
+                  expandedHeight: 200,
+                  pinned: true,
+                  backgroundColor: AppTheme.bgDeep,
+                  surfaceTintColor: Colors.transparent,
+                  leading: IconButton(
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppTheme.border.withValues(alpha: 0.3)),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 16),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: AppTheme.border.withValues(alpha: 0.3)),
+                        ),
+                        child:
+                            const Icon(Icons.settings_rounded, size: 18),
+                      ),
+                      onPressed: () =>
+                          _showServerSettings(context, provider),
+                    ),
+                    IconButton(
+                      icon: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: AppTheme.border.withValues(alpha: 0.3)),
+                        ),
+                        child:
+                            const Icon(Icons.refresh_rounded, size: 18),
+                      ),
+                      onPressed: provider.isLoading
+                          ? null
+                          : () => provider.refreshServerData(),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: _HeroSection(
+                      serverName: config?.displayName ?? 'Server',
+                      isConnected: provider.isConnected,
+                      version: server?.version,
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: provider.isLoading && server == null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primary.withValues(alpha: 0.7),
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Connecting...',
+                          style: TextStyle(
+                              color: AppTheme.textMuted, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  )
+                : provider.error != null && server == null
+                    ? _buildErrorState(context, provider)
+                    : _buildContent(context, provider),
           ),
-          body: provider.isLoading && server == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primary),
-                )
-              : provider.error != null && server == null
-                  ? _buildErrorState(context, provider)
-                  : _buildContent(context, provider),
           floatingActionButton: server != null
-              ? FloatingActionButton(
-                  onPressed: () => _createAccessKey(context, provider),
-                  child: const Icon(Icons.person_add_rounded),
+              ? Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: FloatingActionButton.extended(
+                    onPressed: () =>
+                        _createAccessKey(context, provider),
+                    icon: const Icon(Icons.person_add_rounded, size: 20),
+                    label: const Text('Add Key',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
                 )
               : null,
         );
@@ -63,30 +150,43 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
   Widget _buildErrorState(BuildContext context, ServerProvider provider) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(40),
+        padding: const EdgeInsets.all(48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                color: AppTheme.danger, size: 48),
-            const SizedBox(height: 16),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.danger.withValues(alpha: 0.1),
+              ),
+              child: const Icon(Icons.cloud_off_rounded,
+                  color: AppTheme.danger, size: 36),
+            ),
+            const SizedBox(height: 20),
             Text(
               'Connection Failed',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               provider.error ?? 'Unknown error',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textMuted,
+                    height: 1.4,
                   ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             FilledButton.icon(
               onPressed: () => provider.refreshServerData(),
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Retry'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 14),
+              ),
             ),
           ],
         ),
@@ -99,30 +199,31 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
 
     return RefreshIndicator(
       color: AppTheme.primary,
+      backgroundColor: AppTheme.bgCard,
       onRefresh: () => provider.refreshServerData(),
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 100),
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
+        padding: const EdgeInsets.only(bottom: 120, top: 8),
         children: [
           // Server info card
           if (server != null) _buildServerInfoCard(context, provider),
 
-          // Data transfer summary
+          // Data transfer section
           if (provider.dataTransfer.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                'Data Transfer',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+            _SectionHeader(
+              title: 'Data Transfer',
+              icon: Icons.bar_chart_rounded,
             ),
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
               decoration: AppTheme.glassmorphicCard,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       ShaderMask(
                         shaderCallback: (bounds) =>
@@ -133,96 +234,82 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium
-                              ?.copyWith(color: Colors.white),
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'total',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Text(
+                          'total transferred',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppTheme.textMuted),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  UsageChart(
-                    dataByKeyName: _buildChartData(provider),
-                  ),
+                  const SizedBox(height: 20),
+                  UsageChart(dataByKeyName: _buildChartData(provider)),
                 ],
               ),
             ),
           ],
 
           // Access keys section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-            child: Row(
-              children: [
-                Text(
-                  'Access Keys',
-                  style: Theme.of(context).textTheme.titleLarge,
+          _SectionHeader(
+            title: 'Access Keys',
+            icon: Icons.vpn_key_rounded,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.2),
+                    AppTheme.primary.withValues(alpha: 0.1),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${provider.accessKeys.length}',
-                    style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${provider.accessKeys.length}',
+                style: const TextStyle(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
                 ),
-              ],
+              ),
             ),
           ),
 
           if (provider.accessKeys.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Column(
-                  children: [
-                    const Icon(Icons.vpn_key_off_rounded,
-                        color: AppTheme.textMuted, size: 40),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No access keys',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Create one to share access',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            )
+            _buildEmptyKeys(context)
           else
             ...provider.accessKeys.map((key) => AccessKeyTile(
                   accessKey: key,
                   onTap: () => _openKeyDetail(context, key),
-                  onDelete: () => _deleteKey(context, provider, key),
-                  onRename: () => _renameKey(context, provider, key),
+                  onDelete: () =>
+                      _deleteKey(context, provider, key),
+                  onRename: () =>
+                      _renameKey(context, provider, key),
                 )),
 
           // Loading indicator
           if (provider.isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(20),
               child: Center(
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.primary,
+                    strokeWidth: 2.5,
+                    color: AppTheme.primary.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -237,109 +324,85 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     final server = provider.serverInfo!;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      decoration: AppTheme.accentGradientCard,
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      decoration: AppTheme.highlightCard,
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            // Info grid
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: provider.isConnected
-                        ? AppTheme.primary
-                        : AppTheme.danger,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (provider.isConnected
-                                ? AppTheme.primary
-                                : AppTheme.danger)
-                            .withValues(alpha: 0.5),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
+                _InfoChip(
+                  icon: Icons.dns_rounded,
+                  label: 'Hostname',
+                  value: server.hostnameForAccessKeys ?? 'Default',
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  provider.isConnected ? 'Connected' : 'Offline',
-                  style: TextStyle(
-                    color: provider.isConnected
-                        ? AppTheme.primary
-                        : AppTheme.danger,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                _InfoChip(
+                  icon: Icons.numbers_rounded,
+                  label: 'Port',
+                  value: server.portForNewAccessKeys?.toString() ?? 'Default',
                 ),
-                const Spacer(),
-                if (server.version != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.bgDark.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'v${server.version}',
-                      style: const TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
+                _InfoChip(
+                  icon: Icons.analytics_outlined,
+                  label: 'Metrics',
+                  value: server.metricsEnabled ? 'On' : 'Off',
+                  valueColor: server.metricsEnabled
+                      ? AppTheme.primary
+                      : AppTheme.textMuted,
+                ),
+                if (server.accessKeyDataLimit != null)
+                  _InfoChip(
+                    icon: Icons.data_usage_rounded,
+                    label: 'Global Limit',
+                    value: FormatUtils.formatBytes(
+                        server.accessKeyDataLimit!.bytes),
                   ),
+                _InfoChip(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Created',
+                  value: FormatUtils.formatDate(server.createdTimestampMs),
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            _infoRow(context, 'Server ID', server.serverId),
-            _infoRow(context, 'Hostname',
-                server.hostnameForAccessKeys ?? 'Default'),
-            _infoRow(context, 'Port',
-                server.portForNewAccessKeys?.toString() ?? 'Default'),
-            _infoRow(context, 'Metrics',
-                server.metricsEnabled ? 'Enabled' : 'Disabled'),
-            if (server.accessKeyDataLimit != null)
-              _infoRow(
-                context,
-                'Global Limit',
-                FormatUtils.formatBytes(server.accessKeyDataLimit!.bytes),
-              ),
-            _infoRow(context, 'Created',
-                FormatUtils.formatDate(server.createdTimestampMs)),
           ],
         ),
       ),
     );
   }
 
-  Widget _infoRow(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
+  Widget _buildEmptyKeys(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(32),
+      decoration: AppTheme.glassmorphicCard,
+      child: Column(
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textMuted,
-                  ),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.surfaceDim.withValues(alpha: 0.5),
             ),
+            child: const Icon(Icons.vpn_key_off_rounded,
+                color: AppTheme.textMuted, size: 28),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          const SizedBox(height: 16),
+          Text(
+            'No access keys',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Create one to share access',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textMuted),
           ),
         ],
       ),
@@ -369,11 +432,10 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
       BuildContext context, ServerProvider provider) async {
     final name = await _showNameDialog(context, 'Create Access Key',
         hint: 'Key name (optional)');
-    if (name == null) return; // User cancelled
+    if (name == null) return;
 
     try {
-      await provider.createAccessKey(
-          name: name.isEmpty ? null : name);
+      await provider.createAccessKey(name: name.isEmpty ? null : name);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -383,8 +445,8 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     }
   }
 
-  Future<void> _deleteKey(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
+  Future<void> _deleteKey(BuildContext context, ServerProvider provider,
+      AccessKey key) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -417,13 +479,10 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     }
   }
 
-  Future<void> _renameKey(
-      BuildContext context, ServerProvider provider, AccessKey key) async {
-    final name = await _showNameDialog(
-      context,
-      'Rename Access Key',
-      initialValue: key.name,
-    );
+  Future<void> _renameKey(BuildContext context, ServerProvider provider,
+      AccessKey key) async {
+    final name = await _showNameDialog(context, 'Rename Access Key',
+        initialValue: key.name);
     if (name == null) return;
     try {
       await provider.renameAccessKey(key.id, name);
@@ -436,20 +495,18 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     }
   }
 
-  void _showServerSettings(BuildContext context, ServerProvider provider) {
+  void _showServerSettings(
+      BuildContext context, ServerProvider provider) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => _ServerSettingsSheet(provider: provider),
     );
   }
 
-  Future<String?> _showNameDialog(
-    BuildContext context,
-    String title, {
-    String? initialValue,
-    String? hint,
-  }) {
+  Future<String?> _showNameDialog(BuildContext context, String title,
+      {String? initialValue, String? hint}) {
     final controller = TextEditingController(text: initialValue);
     return showDialog<String>(
       context: context,
@@ -475,11 +532,230 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
   }
 }
 
+// ─── Hero Section ─────────────────────────────────────────────────
+
+class _HeroSection extends StatelessWidget {
+  const _HeroSection({
+    required this.serverName,
+    required this.isConnected,
+    this.version,
+  });
+
+  final String serverName;
+  final bool isConnected;
+  final String? version;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0D1F3C), Color(0xFF050A18)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Glow accent
+          Positioned(
+            top: -40,
+            right: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    (isConnected ? AppTheme.primary : AppTheme.danger)
+                        .withValues(alpha: 0.12),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Positioned(
+            bottom: 20,
+            left: 24,
+            right: 24,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  serverName,
+                  style: Theme.of(context).textTheme.headlineLarge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (isConnected
+                                ? AppTheme.primary
+                                : AppTheme.danger)
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: (isConnected
+                                  ? AppTheme.primary
+                                  : AppTheme.danger)
+                              .withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: AppTheme.statusDot(
+                              isConnected
+                                  ? AppTheme.primary
+                                  : AppTheme.danger,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isConnected ? 'Connected' : 'Offline',
+                            style: TextStyle(
+                              color: isConnected
+                                  ? AppTheme.primary
+                                  : AppTheme.danger,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (version != null) ...[
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceDim
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'v$version',
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section Header ───────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(
+      {required this.title, required this.icon, this.trailing});
+  final String title;
+  final IconData icon;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.primary),
+          const SizedBox(width: 10),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          if (trailing != null) ...[
+            const SizedBox(width: 10),
+            trailing!,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Info Chip ────────────────────────────────────────────────────
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceDim.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.border.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppTheme.textMuted),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  color: valueColor ?? AppTheme.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Server Settings Bottom Sheet ─────────────────────────────────
 
 class _ServerSettingsSheet extends StatelessWidget {
   const _ServerSettingsSheet({required this.provider});
-
   final ServerProvider provider;
 
   @override
@@ -487,115 +763,136 @@ class _ServerSettingsSheet extends StatelessWidget {
     final server = provider.serverInfo;
     if (server == null) return const SizedBox.shrink();
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
-      expand: false,
-      builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.textMuted,
-                    borderRadius: BorderRadius.circular(2),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(color: AppTheme.borderLight, width: 1),
+          left: BorderSide(color: AppTheme.borderLight, width: 1),
+          right: BorderSide(color: AppTheme.borderLight, width: 1),
+        ),
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (context, scrollController) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.textMuted.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-              Text(
-                'Server Settings',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 24),
-
-              // Rename server
-              _SettingsTile(
-                icon: Icons.edit_rounded,
-                title: 'Rename Server',
-                subtitle: server.name,
-                onTap: () => _renameServer(context),
-              ),
-
-              // Update hostname
-              _SettingsTile(
-                icon: Icons.dns_rounded,
-                title: 'Hostname',
-                subtitle: server.hostnameForAccessKeys ?? 'Default',
-                onTap: () => _setHostname(context),
-              ),
-
-              // Update port
-              _SettingsTile(
-                icon: Icons.numbers_rounded,
-                title: 'Port for New Keys',
-                subtitle: server.portForNewAccessKeys?.toString() ?? 'Default',
-                onTap: () => _setPort(context),
-              ),
-
-              // Global data limit
-              _SettingsTile(
-                icon: Icons.data_usage_rounded,
-                title: 'Global Data Limit',
-                subtitle: server.accessKeyDataLimit != null
-                    ? FormatUtils.formatBytes(
-                        server.accessKeyDataLimit!.bytes)
-                    : 'No limit',
-                onTap: () => _setGlobalDataLimit(context),
-              ),
-
-              // Metrics toggle
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCardLight,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
+                Row(
                   children: [
-                    const Icon(Icons.analytics_outlined,
-                        color: AppTheme.textMuted, size: 22),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Share Metrics',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            'Help improve Outline',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: server.metricsEnabled,
-                      onChanged: (val) {
-                        provider.setMetricsEnabled(val);
-                        Navigator.pop(context);
-                      },
-                    ),
+                    const Icon(Icons.settings_rounded,
+                        color: AppTheme.primary, size: 22),
+                    const SizedBox(width: 10),
+                    Text('Server Settings',
+                        style: Theme.of(context).textTheme.titleLarge),
                   ],
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                const SizedBox(height: 20),
+
+                _SettingsTile(
+                  icon: Icons.edit_rounded,
+                  title: 'Rename Server',
+                  subtitle: server.name,
+                  onTap: () => _renameServer(context),
+                ),
+                _SettingsTile(
+                  icon: Icons.dns_rounded,
+                  title: 'Hostname',
+                  subtitle: server.hostnameForAccessKeys ?? 'Default',
+                  onTap: () => _setHostname(context),
+                ),
+                _SettingsTile(
+                  icon: Icons.numbers_rounded,
+                  title: 'Port for New Keys',
+                  subtitle:
+                      server.portForNewAccessKeys?.toString() ?? 'Default',
+                  onTap: () => _setPort(context),
+                ),
+                _SettingsTile(
+                  icon: Icons.data_usage_rounded,
+                  title: 'Global Data Limit',
+                  subtitle: server.accessKeyDataLimit != null
+                      ? FormatUtils.formatBytes(
+                          server.accessKeyDataLimit!.bytes)
+                      : 'No limit',
+                  onTap: () => _setGlobalDataLimit(context),
+                ),
+
+                // Metrics toggle
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgCardLight.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.border.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceDim.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.analytics_outlined,
+                            color: AppTheme.textMuted, size: 18),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Share Metrics',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium),
+                            Text('Help improve Outline',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: server.metricsEnabled,
+                        onChanged: (val) {
+                          provider.setMetricsEnabled(val);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -712,10 +1009,10 @@ class _ServerSettingsSheet extends StatelessWidget {
                 suffixText: 'GB',
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
-              'Applies to all access keys. Leave empty and save to remove.',
-              style: Theme.of(context).textTheme.bodySmall,
+              'Applies to all access keys. Leave empty to remove.',
+              style: Theme.of(ctx).textTheme.bodySmall,
             ),
           ],
         ),
@@ -729,7 +1026,7 @@ class _ServerSettingsSheet extends StatelessWidget {
               onPressed: () => Navigator.pop(ctx, 'REMOVE'),
               style:
                   TextButton.styleFrom(foregroundColor: AppTheme.danger),
-              child: const Text('Remove Limit'),
+              child: const Text('Remove'),
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
@@ -740,7 +1037,6 @@ class _ServerSettingsSheet extends StatelessWidget {
     );
 
     if (result == null) return;
-
     if (result == 'REMOVE') {
       await provider.removeGlobalDataLimit();
     } else if (result.isNotEmpty) {
@@ -752,6 +1048,8 @@ class _ServerSettingsSheet extends StatelessWidget {
     if (context.mounted) Navigator.pop(context);
   }
 }
+
+// ─── Settings Tile ────────────────────────────────────────────────
 
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
@@ -771,24 +1069,33 @@ class _SettingsTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: AppTheme.bgCardLight,
-          borderRadius: BorderRadius.circular(14),
+          color: AppTheme.bgCardLight.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.border.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.textMuted, size: 22),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceDim.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppTheme.textMuted, size: 18),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text(title,
+                      style: Theme.of(context).textTheme.titleMedium),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall,
