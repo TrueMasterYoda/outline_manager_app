@@ -73,16 +73,19 @@ class _ServerListScreenState extends State<ServerListScreen> {
                             size: 24,
                           ),
                         ),
-                        child: ServerCard(
-                          config: config,
-                          isOnline: isOnline,
-                          onTap: () => _openServer(context, provider, config),
-                          onDelete: () async {
-                            final confirmed = await _confirmDelete(context);
-                            if (confirmed == true) {
-                              provider.removeServer(config.id);
-                            }
-                          },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: ServerCard(
+                            config: config,
+                            isOnline: isOnline,
+                            onTap: () => _openServer(context, provider, config),
+                            onDelete: () async {
+                              final confirmed = await _confirmDelete(context);
+                              if (confirmed == true) {
+                                provider.removeServer(config.id);
+                              }
+                            },
+                          ),
                         ),
                       );
                     },
