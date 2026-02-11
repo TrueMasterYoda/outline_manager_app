@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,8 +6,12 @@ import '../models/server_config.dart';
 import '../providers/server_provider.dart';
 import '../theme/app_theme.dart';
 
+enum AddServerMode { url, json }
+
 class AddServerScreen extends StatefulWidget {
-  const AddServerScreen({super.key});
+  const AddServerScreen({super.key, this.mode = AddServerMode.url});
+
+  final AddServerMode mode;
 
   @override
   State<AddServerScreen> createState() => _AddServerScreenState();
@@ -125,46 +130,99 @@ class _AddServerScreenState extends State<AddServerScreen>
 
                     const SizedBox(height: 32),
 
-                    // API URL field
-                    _FieldLabel(
-                        label: 'API URL', icon: Icons.link_rounded),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _urlController,
-                      decoration: InputDecoration(
-                        hintText: 'https://1.2.3.4:1234/secret-path',
-                        prefixIcon: Container(
-                          margin: const EdgeInsets.all(12),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                    // API URL or JSON field
+                    if (widget.mode == AddServerMode.url) ...[
+                      _FieldLabel(label: 'API URL', icon: Icons.link_rounded),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _urlController,
+                        decoration: InputDecoration(
+                          hintText: 'https://1.2.3.4:1234/secret-path',
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(12),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.link_rounded,
+                                size: 14, color: AppTheme.primary),
                           ),
-                          child: const Icon(Icons.link_rounded,
-                              size: 14, color: AppTheme.primary),
                         ),
+                        keyboardType: TextInputType.url,
+                        autocorrect: false,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          color: AppTheme.textPrimary,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter the API URL';
+                          }
+                          final uri = Uri.tryParse(value.trim());
+                          if (uri == null ||
+                              !uri.hasScheme ||
+                              !uri.hasAuthority) {
+                            return 'Invalid URL format';
+                          }
+                          return null;
+                        },
                       ),
-                      keyboardType: TextInputType.url,
-                      autocorrect: false,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        color: AppTheme.textPrimary,
+                    ] else ...[
+                      _FieldLabel(
+                          label: 'Server Configuration (JSON)',
+                          icon: Icons.data_object_rounded),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 120,
+                        child: TextFormField(
+                          controller: _urlController,
+                          textAlignVertical: TextAlignVertical.center,
+                          expands: true,
+                          maxLines: null,
+                          minLines: null,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Paste the full JSON output from your server setup code here...',
+                            prefixIcon: Container(
+                              margin: const EdgeInsets.all(12),
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.data_object_rounded,
+                                  size: 14, color: AppTheme.primary),
+                            ),
+                          ),
+                          keyboardType: TextInputType.multiline,
+                          autocorrect: false,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                            color: AppTheme.textPrimary,
+                            height: 1.5,
+                          ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please paste the server configuration';
+                          }
+                          try {
+                            final json = jsonDecode(value.trim());
+                            if (json is! Map || !json.containsKey('apiUrl')) {
+                              return 'Invalid configuration: missing apiUrl';
+                            }
+                          } catch (e) {
+                            return 'Invalid JSON format';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter the API URL';
-                        }
-                        final uri = Uri.tryParse(value.trim());
-                        if (uri == null ||
-                            !uri.hasScheme ||
-                            !uri.hasAuthority) {
-                          return 'Invalid URL format';
-                        }
-                        return null;
-                      },
                     ),
+                    ],
 
                     const SizedBox(height: 24),
 
@@ -194,47 +252,51 @@ class _AddServerScreenState extends State<AddServerScreen>
 
                     const SizedBox(height: 24),
 
-                    // Certificate fingerprint
-                    _FieldLabel(
-                        label: 'Certificate Fingerprint',
-                        icon: Icons.fingerprint_rounded,
-                        optional: true),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _fingerprintController,
-                      decoration: InputDecoration(
-                        hintText: 'SHA-256 fingerprint',
-                        prefixIcon: Container(
-                          margin: const EdgeInsets.all(12),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: AppTheme.purple.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                    // Certificate fingerprint (Only for URL mode)
+                    if (widget.mode == AddServerMode.url) ...[
+                      const SizedBox(height: 24),
+                      _FieldLabel(
+                          label: 'Certificate Fingerprint',
+                          icon: Icons.fingerprint_rounded,
+                          optional: true),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _fingerprintController,
+                        decoration: InputDecoration(
+                          hintText: 'SHA-256 fingerprint',
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(12),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: AppTheme.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.fingerprint_rounded,
+                                size: 14, color: AppTheme.purple),
                           ),
-                          child: const Icon(Icons.fingerprint_rounded,
-                              size: 14, color: AppTheme.purple),
+                        ),
+                        autocorrect: false,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
-                      autocorrect: false,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: AppTheme.textPrimary,
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Text(
+                          'For self-signed certificates, provide the SHA-256 fingerprint.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textMuted
+                                        .withValues(alpha: 0.7),
+                                    height: 1.4,
+                                  ),
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Text(
-                        'For self-signed certificates, provide the SHA-256 fingerprint.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textMuted.withValues(alpha: 0.7),
-                              height: 1.4,
-                            ),
-                      ),
-                    ),
+                    ],
 
                     // Error message
                     if (_errorMessage != null) ...[
@@ -373,15 +435,28 @@ class _AddServerScreenState extends State<AddServerScreen>
     });
 
     try {
+      String apiUrl = '';
+      String? certFingerprint;
+
+      if (widget.mode == AddServerMode.url) {
+        apiUrl = _urlController.text.trim();
+        certFingerprint = _fingerprintController.text.trim().isEmpty
+            ? null
+            : _fingerprintController.text.trim();
+      } else {
+        // Parse JSON
+        final json = jsonDecode(_urlController.text.trim());
+        apiUrl = json['apiUrl'] as String;
+        certFingerprint = json['certSha256'] as String?;
+      }
+
       final config = ServerConfig(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        apiUrl: _urlController.text.trim(),
+        apiUrl: apiUrl,
         name: _nameController.text.trim().isEmpty
             ? null
             : _nameController.text.trim(),
-        certFingerprint: _fingerprintController.text.trim().isEmpty
-            ? null
-            : _fingerprintController.text.trim(),
+        certFingerprint: certFingerprint,
       );
 
       await context.read<ServerProvider>().addServer(config);

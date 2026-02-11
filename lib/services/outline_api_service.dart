@@ -24,11 +24,20 @@ class OutlineApiService {
       ..badCertificateCallback = (X509Certificate cert, String host, int port) {
         // Accept self-signed certs — optionally verify fingerprint
         if (certFingerprint == null || certFingerprint!.isEmpty) return true;
+        
         final digest = sha256.convert(cert.der);
-        final certHash = digest.bytes
-            .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
-            .join(':');
-        return certHash == certFingerprint!.toUpperCase();
+        // Normalize computed hash: lowercase, no colons
+        final certHex = digest.bytes
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join()
+            .toLowerCase();
+            
+        // Normalize expected fingerprint: lowercase, no colons
+        final expected = certFingerprint!
+            .replaceAll(':', '')
+            .toLowerCase();
+            
+        return certHex == expected;
       };
     return _httpClient!;
   }

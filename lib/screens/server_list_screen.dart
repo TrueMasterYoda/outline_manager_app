@@ -244,16 +244,133 @@ class _ServerListScreenState extends State<ServerListScreen> {
   }
 
   void _addServer(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              'Add Server',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 24),
+            _buildAddOption(
+              context,
+              icon: Icons.link_rounded,
+              title: 'Paste API URL',
+              subtitle: 'Use the management URL from your Outline server',
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToAddScreen(context, AddServerMode.url);
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildAddOption(
+              context,
+              icon: Icons.data_object_rounded,
+              title: 'Paste JSON Configuration',
+              subtitle: 'Paste the full JSON output from the setup script',
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToAddScreen(context, AddServerMode.json);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddOption(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppTheme.primary),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAddScreen(BuildContext context, AddServerMode mode) {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const AddServerScreen(),
+        pageBuilder: (_, __, ___) => AddServerScreen(mode: mode),
         transitionsBuilder: (_, anim, __, child) {
           return SlideTransition(
             position: Tween(
               begin: const Offset(0, 1),
               end: Offset.zero,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           );
         },
