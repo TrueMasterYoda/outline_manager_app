@@ -9,34 +9,34 @@ class FormatUtils {
         ? 0
         : (bytes.toDouble().toString().length <= 3
             ? 0
-            : _log1024(bytes.toDouble()));
-    final value = bytes / _pow1024(i);
+            : _log1000(bytes.toDouble()));
+    final value = bytes / _pow1000(i);
     return '${value.toStringAsFixed(decimals)} ${suffixes[i]}';
   }
 
-  static int _log1024(double bytes) {
+  static int _log1000(double bytes) {
     int i = 0;
     double val = bytes;
-    while (val >= 1024 && i < 5) {
-      val /= 1024;
+    while (val >= 1000 && i < 5) {
+      val /= 1000;
       i++;
     }
     return i;
   }
 
-  static double _pow1024(int exp) {
+  static double _pow1000(int exp) {
     double result = 1;
     for (int i = 0; i < exp; i++) {
-      result *= 1024;
+      result *= 1000;
     }
     return result;
   }
 
   /// Converts GB to bytes.
-  static int gbToBytes(double gb) => (gb * 1024 * 1024 * 1024).round();
+  static int gbToBytes(double gb) => (gb * 1000 * 1000 * 1000).round();
 
   /// Converts bytes to GB.
-  static double bytesToGb(int bytes) => bytes / (1024 * 1024 * 1024);
+  static double bytesToGb(int bytes) => bytes / (1000 * 1000 * 1000);
 
   /// Formats a timestamp in ms to a readable date.
   static String formatDate(int timestampMs) {
