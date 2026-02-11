@@ -287,7 +287,7 @@ class _AddServerScreenState extends State<AddServerScreen>
                       Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Text(
-                          'For self-signed certificates, provide the SHA-256 fingerprint.',
+                          'Recommended. For self-signed certificates, provide the SHA-256 fingerprint. Prevents MITM Attack.',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppTheme.textMuted
