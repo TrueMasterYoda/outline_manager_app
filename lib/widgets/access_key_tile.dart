@@ -138,7 +138,14 @@ class _AccessKeyTileState extends State<AccessKeyTile> {
                         onTap: () => _shareAccessUrl(context),
                         tooltip: 'Share',
                       ),
+                      const SizedBox(width: 4),
                     ],
+                    _ActionButton(
+                      icon: Icons.delete_rounded,
+                      onTap: widget.onDelete,
+                      tooltip: 'Delete',
+                      color: AppTheme.danger,
+                    ),
                   ],
                 ),
 
@@ -188,11 +195,15 @@ class _AccessKeyTileState extends State<AccessKeyTile> {
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton(
-      {required this.icon, required this.onTap, required this.tooltip});
+      {required this.icon,
+      required this.onTap,
+      required this.tooltip,
+      this.color});
 
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +221,8 @@ class _ActionButton extends StatelessWidget {
               color: AppTheme.surfaceDim.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 16, color: AppTheme.textMuted),
+            child: Icon(icon,
+                size: 16, color: color ?? AppTheme.textMuted),
           ),
         ),
       ),

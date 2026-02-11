@@ -8,9 +8,11 @@ import '../utils/format_utils.dart';
 import '../widgets/access_key_tile.dart';
 
 class AccessKeyDetailScreen extends StatelessWidget {
-  const AccessKeyDetailScreen({super.key, required this.accessKey});
+  const AccessKeyDetailScreen(
+      {super.key, required this.accessKey, required this.onDelete});
 
   final AccessKey accessKey;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +37,24 @@ class AccessKeyDetailScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: AppTheme.danger.withValues(alpha: 0.3)),
+              ),
+              child: const Icon(Icons.delete_rounded,
+                  size: 18, color: AppTheme.danger),
+            ),
+            onPressed: onDelete,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),

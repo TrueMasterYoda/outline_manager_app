@@ -423,7 +423,31 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AccessKeyDetailScreen(accessKey: key),
+        builder: (_) => AccessKeyDetailScreen(
+          accessKey: key,
+          onDelete: () async {
+            // Navigator.pop(context); // Close detail screen first? No, let's do it after success?
+            // Actually, common pattern is to show dialog on top of detail screen,
+            // then if deleted, pop detail screen.
+            // But _deleteKey shows a dialog.
+            // If we run _deleteKey(context, ...), it shows dialog.
+            // If confirmed and successful, we should probably pop the detail screen.
+
+            // Wait for _deleteKey. It returns void.
+            // It handles its own error showing.
+            // But currently _deleteKey doesn't return whether it succeeded or was confirmed.
+            // I should modify _deleteKey to return Future<bool>
+            // For now, I'll just wrap it and if the key is gone from provider, pop?
+            // Or easier: pass a callback that handles the UI flow.
+
+            final provider =
+                Provider.of<ServerProvider>(context, listen: false);
+            final deleted = await _deleteKey(context, provider, key);
+            if (deleted && context.mounted) {
+              Navigator.pop(context);
+            }
+          },
+        ),
       ),
     );
   }
@@ -445,7 +469,7 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     }
   }
 
-  Future<void> _deleteKey(BuildContext context, ServerProvider provider,
+  Future<bool> _deleteKey(BuildContext context, ServerProvider provider,
       AccessKey key) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -466,17 +490,21 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
         ],
       ),
     );
+
     if (confirmed == true) {
       try {
         await provider.deleteAccessKey(key.id);
+        return true;
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error: $e')),
           );
         }
+        return false;
       }
     }
+    return false;
   }
 
   Future<void> _renameKey(BuildContext context, ServerProvider provider,
