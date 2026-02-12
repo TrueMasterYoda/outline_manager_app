@@ -59,6 +59,24 @@ class AccessKeyDetailScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
+                tooltip: 'Rename',
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppTheme.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(Icons.edit_rounded,
+                      size: 18, color: AppTheme.primary),
+                ),
+                onPressed: () => _showRenameDialog(context, currentKey),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Delete',
                 icon: Container(
                   width: 36,
                   height: 36,
@@ -295,6 +313,56 @@ class AccessKeyDetailScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _showRenameDialog(BuildContext context, AccessKey key) async {
+    final controller = TextEditingController(text: key.name);
+    // Capture provider before async gap
+    final provider = context.read<ServerProvider>();
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Rename Key'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppTheme.textPrimary),
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            hintText: 'Enter key name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (newName != null && newName != key.name) {
+      try {
+        await provider.renameAccessKey(key.id, newName);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _showDataLimitSheet(BuildContext context, AccessKey key) async {
