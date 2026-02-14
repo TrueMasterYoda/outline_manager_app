@@ -1,11 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/server_config.dart';
 import '../providers/server_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/server_card.dart';
 import 'add_server_screen.dart';
 import 'server_detail_screen.dart';
+import 'server_install_screen.dart';
 
 class ServerListScreen extends StatefulWidget {
   const ServerListScreen({super.key});
@@ -246,6 +249,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
           color: AppTheme.bgCard,
@@ -253,7 +257,8 @@ class _ServerListScreenState extends State<ServerListScreen> {
           border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 48),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -272,7 +277,29 @@ class _ServerListScreenState extends State<ServerListScreen> {
               'Add Server',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose how you want to set up your server',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textMuted,
+                  ),
+            ),
             const SizedBox(height: 24),
+            // Automated option — prominent with gradient accent
+            _buildAddOption(
+              context,
+              icon: Icons.rocket_launch_rounded,
+              title: 'Automated Setup',
+              subtitle: 'Connect via SSH, install Outline, and add automatically',
+              accentColor: AppTheme.accent,
+              highlighted: true,
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToInstallScreen(context);
+              },
+            ),
+            const SizedBox(height: 16),
+            // Manual option — URL
             _buildAddOption(
               context,
               icon: Icons.link_rounded,
@@ -283,7 +310,8 @@ class _ServerListScreenState extends State<ServerListScreen> {
                 _navigateToAddScreen(context, AddServerMode.url);
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            // Manual option — JSON
             _buildAddOption(
               context,
               icon: Icons.data_object_rounded,
@@ -296,6 +324,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -306,14 +335,22 @@ class _ServerListScreenState extends State<ServerListScreen> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? accentColor,
+    bool highlighted = false,
   }) {
+    final color = accentColor ?? AppTheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+          color: highlighted ? color.withValues(alpha: 0.05) : null,
+          border: Border.all(
+            color: highlighted
+                ? color.withValues(alpha: 0.4)
+                : AppTheme.border.withValues(alpha: 0.5),
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -321,10 +358,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppTheme.primary),
+              child: Icon(icon, color: color),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -333,10 +370,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
-                      color: AppTheme.textPrimary,
+                      color: highlighted ? color : AppTheme.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -350,8 +387,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: AppTheme.textSecondary),
+            Icon(Icons.chevron_right_rounded, color: highlighted ? color : AppTheme.textSecondary),
           ],
         ),
       ),
@@ -376,6 +412,58 @@ class _ServerListScreenState extends State<ServerListScreen> {
         transitionDuration: const Duration(milliseconds: 400),
       ),
     );
+  }
+
+  void _navigateToInstallScreen(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const ServerInstallScreen(),
+        transitionsBuilder: (_, anim, __, child) {
+          return SlideTransition(
+            position: Tween(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+
+    if (result != null && result is String && mounted) {
+      try {
+        final map = jsonDecode(result);
+        final config = ServerConfig(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          apiUrl: map['apiUrl'] as String,
+          certFingerprint: map['certSha256'] as String?,
+        );
+        await context.read<ServerProvider>().addServer(config);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle_rounded,
+                      color: AppTheme.success, size: 20),
+                  SizedBox(width: 10),
+                  Text('Server installed and added!'),
+                ],
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error adding server: $e')),
+          );
+        }
+      }
+    }
   }
 
   void _openServer(
