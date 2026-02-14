@@ -24,7 +24,7 @@ class SshService {
         try {
           identities = SSHKeyPair.fromPem(privateKey);
         } catch (e) {
-          print('Error parsing private key: $e');
+          // Silently handle parse failure — do not log key material
         }
       }
 

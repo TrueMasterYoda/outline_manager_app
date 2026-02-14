@@ -360,7 +360,7 @@ class AccessKeyDetailScreen extends StatelessWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
+            SnackBar(content: Text('Failed to rename key. Please try again.')),
           );
         }
       }
@@ -389,7 +389,7 @@ class AccessKeyDetailScreen extends StatelessWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
+            SnackBar(content: Text('Failed to update data limit. Please try again.')),
           );
         }
       }

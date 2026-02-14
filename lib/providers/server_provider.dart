@@ -105,7 +105,7 @@ class ServerProvider extends ChangeNotifier {
       await _storage.saveServers(_servers);
       notifyListeners();
     } catch (e) {
-      _setError('Failed to connect: ${e.toString()}');
+      _setError('Failed to connect to the server. Check the URL and your network.');
       rethrow;
     } finally {
       _setLoading(false);
@@ -189,7 +189,7 @@ class ServerProvider extends ChangeNotifier {
       _serverDataTransfer[_selectedServer!.id] = totalDataTransferred;
     } catch (e) {
       _isConnected = false;
-      _setError(e.toString());
+      _setError('Unable to load server data. Please try again.');
     } finally {
       _setLoading(false);
     }

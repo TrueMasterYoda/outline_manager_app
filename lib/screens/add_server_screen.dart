@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -303,10 +304,9 @@ class _AddServerScreenState extends State<AddServerScreen>
                     // Certificate fingerprint (Only for URL mode)
                     if (widget.mode == AddServerMode.url) ...[
                       const SizedBox(height: 24),
-                      _FieldLabel(
+                      const _FieldLabel(
                           label: 'Certificate Fingerprint',
-                          icon: Icons.fingerprint_rounded,
-                          optional: true),
+                          icon: Icons.fingerprint_rounded),
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: _fingerprintController,
@@ -330,12 +330,18 @@ class _AddServerScreenState extends State<AddServerScreen>
                           fontSize: 12,
                           color: AppTheme.textPrimary,
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Certificate fingerprint is required for secure connections';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Text(
-                          'Recommended. For self-signed certificates, provide the SHA-256 fingerprint. Prevents MITM Attack.',
+                          'Required. Provide the SHA-256 fingerprint from your server setup to prevent MITM attacks.',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppTheme.textMuted
@@ -496,10 +502,16 @@ class _AddServerScreenState extends State<AddServerScreen>
         final json = jsonDecode(_urlController.text.trim());
         apiUrl = json['apiUrl'] as String;
         certFingerprint = json['certSha256'] as String?;
+        if (certFingerprint == null || certFingerprint.trim().isEmpty) {
+          setState(() {
+            _errorMessage = 'JSON must include a "certSha256" field for secure connections.';
+          });
+          return;
+        }
       }
 
       final config = ServerConfig(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: List.generate(16, (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0')).join(),
         apiUrl: apiUrl,
         name: _nameController.text.trim().isEmpty
             ? null
@@ -527,7 +539,7 @@ class _AddServerScreenState extends State<AddServerScreen>
     } catch (e) {
       setState(() {
         _errorMessage =
-            'Could not connect to server. Check the URL and try again.\n\nDetails: $e';
+            'Could not connect to server. Check the URL and try again.';
       });
     } finally {
       if (mounted) {

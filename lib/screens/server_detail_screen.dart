@@ -463,7 +463,7 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Failed to create access key. Please try again.')),
         );
       }
     }
@@ -498,7 +498,7 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
+            SnackBar(content: Text('Failed to delete access key. Please try again.')),
           );
         }
         return false;
@@ -517,7 +517,7 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Failed to rename access key. Please try again.')),
         );
       }
     }

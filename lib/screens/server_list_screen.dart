@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -445,7 +446,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
       try {
         final map = jsonDecode(result);
         final config = ServerConfig(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: List.generate(16, (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0')).join(),
           apiUrl: map['apiUrl'] as String,
           certFingerprint: map['certSha256'] as String?,
         );
@@ -464,7 +465,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
         );
       } catch (e) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Error adding server: $e')),
+          SnackBar(content: Text('Failed to add server. Please try again.')),
         );
       }
     }

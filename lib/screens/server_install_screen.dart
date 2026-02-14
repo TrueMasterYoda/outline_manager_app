@@ -58,7 +58,7 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error reading file: $e')),
+          SnackBar(content: Text('Could not read the selected file. Please try again.')),
         );
       }
     }
@@ -126,7 +126,7 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
       }, onError: (e) {
         if (mounted) {
           setState(() {
-            _logs.add("Error: $e");
+            _logs.add("An error occurred during installation.");
           });
           _scrollToBottom();
         }
@@ -134,7 +134,7 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _logs.add("Connection Error: $e");
+          _logs.add("Connection failed. Check the hostname, port, and credentials.");
           // Keep _isInstalling true to show the error log
         });
       }
@@ -366,7 +366,14 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
                         decoration: _inputDeco('22', Icons.numbers_rounded, AppTheme.accent),
                         style: _inputStyle,
                         keyboardType: TextInputType.number,
-                        validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Required';
+                          final port = int.tryParse(value);
+                          if (port == null || port < 1 || port > 65535) {
+                            return 'Port must be 1–65535';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),

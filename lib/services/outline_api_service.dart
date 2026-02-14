@@ -22,8 +22,8 @@ class OutlineApiService {
     if (_httpClient != null) return _httpClient!;
     _httpClient = HttpClient()
       ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        // Accept self-signed certs — optionally verify fingerprint
-        if (certFingerprint == null || certFingerprint!.isEmpty) return true;
+        // Reject unknown certs when no fingerprint is provided
+        if (certFingerprint == null || certFingerprint!.isEmpty) return false;
         
         final digest = sha256.convert(cert.der);
         // Normalize computed hash: lowercase, no colons
