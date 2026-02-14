@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'server_install_screen.dart';
 import '../models/server_config.dart';
 import '../providers/server_provider.dart';
 import '../theme/app_theme.dart';
@@ -128,6 +129,53 @@ class _AddServerScreenState extends State<AddServerScreen>
                       ),
                     ),
 
+                    const SizedBox(height: 16),
+
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ServerInstallScreen(),
+                            ),
+                          );
+
+                          if (result != null && result is String && mounted) {
+                            try {
+                              final map = jsonDecode(result);
+                              // Whether in URL or JSON mode, we can try to populate or switch.
+                              // If in URL mode:
+                              if (widget.mode == AddServerMode.url) {
+                                _urlController.text = map['apiUrl'] ?? '';
+                                if (map['certSha256'] != null) {
+                                  _fingerprintController.text =
+                                      map['certSha256'];
+                                }
+                              } else {
+                                // In JSON mode, just paste the whole JSON
+                                _urlController.text = result;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Configuration received. Please confirm details and add.'),
+                                ),
+                              );
+                            } catch (e) {
+                              // ignore
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.build_circle_outlined, size: 18),
+                        label: const Text('Install Outline on a VPS'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
                     const SizedBox(height: 32),
 
                     // API URL or JSON field
