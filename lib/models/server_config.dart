@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Local configuration for a saved Outline server.
-/// Persisted to SharedPreferences.
+/// Persisted to FlutterSecureStorage.
 class ServerConfig {
   ServerConfig({
     required this.id,
