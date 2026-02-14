@@ -288,17 +288,19 @@ class AccessKeyDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _GradientButton(
-                                icon: Icons.share_rounded,
-                                label: 'Share',
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppTheme.accent,
-                                    AppTheme.accentBright
-                                  ],
+                              child: Builder(
+                                builder: (ctx) => _GradientButton(
+                                  icon: Icons.share_rounded,
+                                  label: 'Share',
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      AppTheme.accent,
+                                      AppTheme.accentBright
+                                    ],
+                                  ),
+                                  onTap: () =>
+                                      _shareAccessUrl(ctx, currentKey),
                                 ),
-                                onTap: () =>
-                                    _shareAccessUrl(context, currentKey),
                               ),
                             ),
                           ],
@@ -413,7 +415,13 @@ class AccessKeyDetailScreen extends StatelessWidget {
 
   void _shareAccessUrl(BuildContext context, AccessKey key) {
     if (key.accessUrl == null) return;
-    Share.share(key.accessUrl!);
+    final box = context.findRenderObject() as RenderBox?;
+    Share.share(
+      key.accessUrl!,
+      sharePositionOrigin: box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null,
+    );
   }
 }
 
