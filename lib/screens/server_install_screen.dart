@@ -171,7 +171,6 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
   void _finishInstall() {
     // Use the raw accumulated output from the service for reliable parsing
     final configJson = _sshService.parseInstallOutput(_sshService.fullOutput);
-    print('[DEBUG] _finishInstall called. configJson: $configJson');
 
     if (configJson != null) {
       final ports = _extractPorts(_sshService.fullOutput);
@@ -246,7 +245,6 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                print('[DEBUG] User clicked Continue. Popping with configJson: $configJson');
                 Navigator.pop(context); // close dialog
                 Navigator.pop(context, configJson); // return result
                 },
