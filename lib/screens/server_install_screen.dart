@@ -130,26 +130,102 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
     });
   }
 
+  /// Extracts port info from the installation output.
+  List<String> _extractPorts(String output) {
+    final ansiRegex = RegExp(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])');
+    final clean = output.replaceAll(ansiRegex, '');
+    final ports = <String>[];
+
+    final mgmtMatch = RegExp(r'Management port (\d+)').firstMatch(clean);
+    final accessMatch = RegExp(r'Access key port (\d+)').firstMatch(clean);
+
+    if (mgmtMatch != null) ports.add('Management: ${mgmtMatch.group(1)} (TCP)');
+    if (accessMatch != null) ports.add('Access Key: ${accessMatch.group(1)} (TCP & UDP)');
+
+    return ports;
+  }
+
   void _finishInstall() {
     // Use the raw accumulated output from the service for reliable parsing
     final configJson = _sshService.parseInstallOutput(_sshService.fullOutput);
 
     if (configJson != null) {
+      final ports = _extractPorts(_sshService.fullOutput);
+
       if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('Installation Complete'),
-            content:
-                const Text('Outline Server installed and configured successfully.'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Outline Server installed successfully!'),
+                if (ports.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Open these ports first!',
+                              style: TextStyle(
+                                color: AppTheme.warning,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...ports.map((p) => Padding(
+                              padding: const EdgeInsets.only(left: 28, bottom: 4),
+                              child: Text(
+                                '• $p',
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 13,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                            )),
+                        const SizedBox(height: 8),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 28),
+                          child: Text(
+                            'Open these ports on your firewall / cloud provider before continuing, or the app won\'t be able to connect.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // close dialog
                   Navigator.pop(context, configJson); // return result
                 },
-                child: const Text('Done'),
+                child: const Text('I\'ve opened the ports — Continue'),
               ),
             ],
           ),
