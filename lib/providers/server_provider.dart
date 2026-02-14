@@ -183,6 +183,10 @@ class ServerProvider extends ChangeNotifier {
         final usage = _dataTransfer[k.id];
         return usage != null ? k.copyWith(dataUsageBytes: usage) : k;
       }).toList();
+      
+      // Update global summaries for home screen
+      _serverKeyCount[_selectedServer!.id] = _accessKeys.length;
+      _serverDataTransfer[_selectedServer!.id] = totalDataTransferred;
     } catch (e) {
       _isConnected = false;
       _setError(e.toString());
