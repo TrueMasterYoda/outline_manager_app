@@ -119,7 +119,7 @@ class ServerCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'DATA TRANSFER (24H)',
+                          'DATA TRANSFER',
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: AppTheme.textMuted,
@@ -128,25 +128,11 @@ class ServerCard extends StatelessWidget {
                                   ),
                         ),
                         const SizedBox(height: 4),
-                        RichText(
-                          text: TextSpan(
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            children: [
-                              TextSpan(
-                                text: totalTransfer ?? '0 GB',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' / 1 TB', // Placeholder limit
-                                style: TextStyle(
-                                  color: AppTheme.textMuted.withValues(alpha: 0.5),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          totalTransfer ?? '0 B',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                       ],

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/server_config.dart';
 import '../providers/server_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/format_utils.dart';
 import '../widgets/server_card.dart';
 import 'add_server_screen.dart';
 import 'server_detail_screen.dart';
@@ -80,6 +81,9 @@ class _ServerListScreenState extends State<ServerListScreen> {
                           child: ServerCard(
                             config: config,
                             isOnline: isOnline,
+                            totalTransfer: FormatUtils.formatBytes(
+                                provider.getServerTransferTotal(config.id)),
+                            keyCount: provider.getServerKeyCount(config.id),
                             onTap: () => _openServer(context, provider, config),
                             onDelete: () async {
                               final confirmed = await _confirmDelete(context);
@@ -415,6 +419,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
   }
 
   void _navigateToInstallScreen(BuildContext context) async {
+    // Capture references before async gap to avoid deactivated widget errors
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ServerProvider>();
+
     final result = await Navigator.push(
       context,
       PageRouteBuilder(
@@ -433,7 +441,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
       ),
     );
 
-    if (result != null && result is String && mounted) {
+    if (result != null && result is String) {
       try {
         final map = jsonDecode(result);
         final config = ServerConfig(
@@ -441,27 +449,23 @@ class _ServerListScreenState extends State<ServerListScreen> {
           apiUrl: map['apiUrl'] as String,
           certFingerprint: map['certSha256'] as String?,
         );
-        await context.read<ServerProvider>().addServer(config);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppTheme.success, size: 20),
-                  SizedBox(width: 10),
-                  Text('Server installed and added!'),
-                ],
-              ),
+        await provider.addServerFromInstall(config);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_rounded,
+                    color: AppTheme.success, size: 20),
+                SizedBox(width: 10),
+                Text('Server installed and added!'),
+              ],
             ),
-          );
-        }
+          ),
+        );
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error adding server: $e')),
-          );
-        }
+        messenger.showSnackBar(
+          SnackBar(content: Text('Error adding server: $e')),
+        );
       }
     }
   }

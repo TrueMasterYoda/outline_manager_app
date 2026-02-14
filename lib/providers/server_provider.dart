@@ -26,6 +26,13 @@ class ServerProvider extends ChangeNotifier {
   Map<String, int> _dataTransfer = {};
   Map<String, int> get dataTransfer => _dataTransfer;
 
+  // Per-server summaries for the home screen cards
+  final Map<String, int> _serverDataTransfer = {};  // serverId -> total bytes
+  final Map<String, int> _serverKeyCount = {};       // serverId -> key count
+
+  int getServerTransferTotal(String serverId) => _serverDataTransfer[serverId] ?? 0;
+  int getServerKeyCount(String serverId) => _serverKeyCount[serverId] ?? 0;
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -39,6 +46,29 @@ class ServerProvider extends ChangeNotifier {
 
   Future<void> loadSavedServers() async {
     _servers = await _storage.loadServers();
+    notifyListeners();
+    // Load summaries in the background
+    loadAllServerSummaries();
+  }
+
+  /// Fetches data-transfer totals and key counts for every server.
+  Future<void> loadAllServerSummaries() async {
+    for (final config in _servers) {
+      try {
+        final api = _getApi(config);
+        final results = await Future.wait([
+          api.listAccessKeys(),
+          api.getDataTransfer(),
+        ]);
+        final keys = results[0] as List<AccessKey>;
+        final transfer = results[1] as Map<String, int>;
+        _serverKeyCount[config.id] = keys.length;
+        _serverDataTransfer[config.id] =
+            transfer.values.fold(0, (sum, v) => sum + v);
+      } catch (_) {
+        // Silently skip unreachable servers
+      }
+    }
     notifyListeners();
   }
 
@@ -80,6 +110,23 @@ class ServerProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Adds a server from a successful automated install — skips connectivity test.
+  Future<void> addServerFromInstall(ServerConfig config) async {
+    _servers.add(config);
+    await _storage.saveServers(_servers);
+    notifyListeners();
+    // Fire-and-forget: try to fetch server info in the background
+    _getApi(config).getServerInfo().then((info) {
+      if (config.name == null || config.name!.isEmpty) {
+        config.name = info.name;
+        _storage.saveServers(_servers);
+        notifyListeners();
+      }
+    }).catchError((_) {
+      // Server may not be reachable yet — that's OK
+    });
   }
 
   Future<void> removeServer(String id) async {
