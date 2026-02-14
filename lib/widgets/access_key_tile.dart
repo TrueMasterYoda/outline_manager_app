@@ -34,7 +34,7 @@ class _AccessKeyTileState extends State<AccessKeyTile> {
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
+      onTap: () {
         setState(() => _pressed = false);
         widget.onTap();
       },
@@ -133,10 +133,12 @@ class _AccessKeyTileState extends State<AccessKeyTile> {
                         tooltip: 'Copy',
                       ),
                       const SizedBox(width: 4),
-                      _ActionButton(
-                        icon: Icons.share_rounded,
-                        onTap: () => _shareAccessUrl(context),
-                        tooltip: 'Share',
+                      Builder(
+                        builder: (context) => _ActionButton(
+                          icon: Icons.share_rounded,
+                          onTap: () => _shareAccessUrl(context),
+                          tooltip: 'Share',
+                        ),
                       ),
                       const SizedBox(width: 4),
                     ],
@@ -167,7 +169,13 @@ class _AccessKeyTileState extends State<AccessKeyTile> {
 
   void _shareAccessUrl(BuildContext context) {
     if (widget.accessKey.accessUrl != null) {
-      Share.share(widget.accessKey.accessUrl!);
+      final box = context.findRenderObject() as RenderBox?;
+      Share.share(
+        widget.accessKey.accessUrl!,
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : null,
+      );
     }
   }
 
