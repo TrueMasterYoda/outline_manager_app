@@ -93,8 +93,31 @@ class _ServerInstallScreenState extends State<ServerInstallScreen> {
 
       stream.listen((data) {
         if (mounted) {
+          // Strip ALL terminal escape sequences for clean display
+          final clean = data
+              // CSI sequences: \x1B[ ... final_byte
+              .replaceAll(RegExp(r'\x1B\[[0-9;?]*[a-zA-Z]'), '')
+              // OSC sequences: \x1B] ... ST (terminated by BEL or ST)
+              .replaceAll(RegExp(r'\x1B\].*?(?:\x07|\x1B\\)'), '')
+              // Partial OSC title remnants (e.g. "0;user@host:~")
+              .replaceAll(RegExp(r'\x1B\][^\n]*'), '')
+              // DCS / PM / APC sequences
+              .replaceAll(RegExp(r'\x1B[P_^].*?\x1B\\'), '')
+              // Single/two-char escape sequences: \x1B followed by one char
+              .replaceAll(RegExp(r'\x1B[^[\]P_^]'), '')
+              // Stray ESC bytes
+              .replaceAll(RegExp(r'\x1B'), '')
+              // Stray control chars (BEL, backspace, etc.)
+              .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '')
+              // Carriage returns
+              .replaceAll(RegExp(r'\r'), '');
+          // Split by newlines so each line is a separate log entry
+          // Also strip leftover OSC title fragments like "0;user@host:~"
+          final lines = clean.split('\n')
+              .map((l) => l.replaceAll(RegExp(r'^\d+;[^\s]*@[^\s]*[:\s]?~?\$?'), '').trim())
+              .where((l) => l.isNotEmpty);
           setState(() {
-            _logs.add(data.trim());
+            _logs.addAll(lines);
           });
           _scrollToBottom();
         }
